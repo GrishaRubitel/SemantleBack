@@ -3,7 +3,6 @@ package main
 import (
 	"archive/zip"
 	"bufio"
-	"fmt"
 	"io"
 	"log"
 	"net/http"
@@ -20,6 +19,7 @@ func VecBaseInicialisation() map[string][]float64 {
 	if err != nil {
 		if os.IsNotExist(err) {
 			log.Println(err)
+			log.Println("Model archive download started")
 			downloadZip(archiveName)
 
 			if err := unzip(archiveName, archiveDir); err != nil {
@@ -29,7 +29,7 @@ func VecBaseInicialisation() map[string][]float64 {
 			}
 		}
 	} else {
-		log.Println("Archive exists:", archiveName, "; Placed in:", archiveDir)
+		log.Println("Model archive exists:", archiveName, "; Unziped model placed in:", archiveDir)
 	}
 
 	return parseModelData(archiveDir + "\\model.txt")
@@ -60,10 +60,6 @@ func parseModelData(pathToModel string) map[string][]float64 {
 	}
 	file.Close()
 
-	for key, value := range vecHolder {
-		fmt.Println("Key:", key)
-		fmt.Println("Array:", value)
-	}
 	return vecHolder
 }
 
