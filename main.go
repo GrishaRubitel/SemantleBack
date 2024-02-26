@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"io/ioutil"
 	"log"
 	"math/rand"
@@ -14,7 +15,8 @@ func main() {
 	var secretWord string
 	var dicPath string = "dataset.txt"
 	wordKeeper := []string{}
-	//vecHolder := VecBaseInicialisation()
+	vecHolder := VecBaseInicialisation()
+	fmt.Println(vecHolder)
 
 	router := gin.Default()
 
