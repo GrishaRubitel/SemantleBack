@@ -3,6 +3,7 @@ package main
 import (
 	"io/ioutil"
 	"log"
+	"math"
 	"math/rand"
 	"net/http"
 	"strings"
@@ -24,7 +25,7 @@ func main() {
 	})
 	router.GET("/similarity", func(ctx *gin.Context) {
 		query := ctx.Query("secretWord")
-		getSimilarityPerc(ctx, &secretWord, &vecHolder, query)
+		getSimilarityPerc(ctx, &secretWord, vecHolder, query)
 	})
 	router.GET("/best_perc")
 	router.GET("/hint")
@@ -41,20 +42,20 @@ func getRandWord(c *gin.Context, secretWord *string, wordKeeper *[]string, dicPa
 	}
 
 	*wordKeeper = strings.Split(string(file), "\n")
-	*secretWord = (*wordKeeper)[rand.Intn(len(*wordKeeper))]
+	*secretWord = strings.ReplaceAll((*wordKeeper)[rand.Intn(len(*wordKeeper))]+"_NOUN", "\r", "")
 
-	c.IndentedJSON(http.StatusCreated, strings.ReplaceAll(*secretWord, "\r", ""))
+	c.IndentedJSON(http.StatusCreated, *secretWord)
 }
 
-func getSimilarityPerc(c *gin.Context, secretWord *string, vecHolder *map[string][]float64, query string) {
+func getSimilarityPerc(c *gin.Context, secretWord *string, vecHolder map[string][]float64, query string) {
 
 	start := time.Now()
 	var res string
 
-	for k := range *vecHolder {
+	for k := range vecHolder {
 		if k == query+"_NOUN" {
 			res = "Word in model"
-			c.IndentedJSON(http.StatusFound, k)
+			c.IndentedJSON(http.StatusFound, processQuery(vecHolder[k], vecHolder[*secretWord]))
 			return
 		} else {
 			res = "Word not in model"
@@ -63,6 +64,22 @@ func getSimilarityPerc(c *gin.Context, secretWord *string, vecHolder *map[string
 
 	log.Println("Time since start: ", time.Since(start), res)
 	c.IndentedJSON(http.StatusNoContent, query)
+}
+
+func processQuery(queryVec []float64, secretVec []float64) float64 {
+	var res float64 = 0
+	var scalProd float64 = 0
+	var queryMod float64 = 0
+	var secretMod float64 = 0
+
+	for i1 := 0; i1 < len(queryVec); i1++ {
+		scalProd += queryVec[i1] * secretVec[i1]
+		queryMod += math.Pow(queryVec[i1], 2)
+		secretMod += math.Pow(secretVec[i1], 2)
+
+	}
+	res = scalProd / (math.Sqrt(queryMod) * math.Sqrt(secretMod))
+	return res
 }
 
 func getBestPerc(c *gin.Context) {
