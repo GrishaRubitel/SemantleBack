@@ -1,6 +1,8 @@
 package main
 
 import (
+	"crypto/md5"
+	"encoding/hex"
 	"io/ioutil"
 	"log"
 	"math"
@@ -24,16 +26,25 @@ func main() {
 	router.GET("/random_word", func(c *gin.Context) {
 		getRandWord(c, &secretWord, &wordKeeper, dicPath)
 	})
-	router.GET("/similarity", func(ctx *gin.Context) {
-		query := ctx.Query("query")
-		getSimilarityPerc(ctx, secretWord, vecHolder, query)
+
+	router.GET("/similarity", func(c *gin.Context) {
+		query := c.Query("query")
+		getSimilarityPerc(c, secretWord, vecHolder, query)
 	})
-	router.GET("/best_perc")
+
+	router.GET("/check", func(c *gin.Context) {
+		query := c.Query("query")
+		getCheck(c, secretWord, query)
+	})
+
 	router.GET("/hint", func(c *gin.Context) {
 		query := c.Query("best_word")
 		getShowHint(c, vecHolder, secretWord, query)
 	})
-	router.GET("/show_finish")
+
+	router.GET("/show_finish", func(c *gin.Context) {
+		getShowFinish(c, secretWord)
+	})
 
 	router.Run("localhost:8080")
 }
@@ -48,7 +59,7 @@ func getRandWord(c *gin.Context, secretWord *string, wordKeeper *[]string, dicPa
 	*wordKeeper = strings.Split(string(file), "\n")
 	*secretWord = strings.ReplaceAll((*wordKeeper)[rand.Intn(len(*wordKeeper))]+"_NOUN", "\r", "")
 
-	c.IndentedJSON(http.StatusCreated, *secretWord)
+	c.IndentedJSON(http.StatusCreated, mdHashing(*secretWord))
 }
 
 func getSimilarityPerc(c *gin.Context, secretWord string, vecHolder map[string][]float64, query string) {
@@ -87,8 +98,8 @@ func processQuery(queryVec []float64, secretVec []float64) float64 {
 	return math.Floor(math.Abs(res * 100))
 }
 
-func getBestPerc(c *gin.Context) {
-
+func getCheck(c *gin.Context, secretWord string, query string) {
+	c.IndentedJSON(http.StatusFound, secretWord == query+"_NOUN")
 }
 
 func getShowHint(c *gin.Context, vecHolder map[string][]float64, secretWord string, query string) {
@@ -110,6 +121,12 @@ func getShowHint(c *gin.Context, vecHolder map[string][]float64, secretWord stri
 	c.IndentedJSON(http.StatusFound, hintHolder[rand.Intn(len(hintHolder))])
 }
 
-func getShowFinish(c *gin.Context) {
+func getShowFinish(c *gin.Context, secretWord string) {
+	c.IndentedJSON(http.StatusOK, secretWord)
+}
 
+func mdHashing(input string) string {
+	byteInput := []byte(input)
+	md5Hash := md5.Sum(byteInput)
+	return hex.EncodeToString(md5Hash[:])
 }
