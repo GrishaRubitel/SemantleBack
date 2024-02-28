@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 )
 
@@ -24,14 +25,15 @@ func main() {
 	siphKey = createKey()
 
 	router := gin.Default()
+	router.Use(cors.Default())
 
 	router.GET("/random_word", func(c *gin.Context) {
 		getRandWord(c, &secretWord, &wordKeeper, dicPath)
 	})
 
 	router.GET("/similarity", func(c *gin.Context) {
+		secretWord := decrypt(strings.ToLower(c.Query("secret_word")))
 		query := c.Query("query")
-		secretWord := decrypt(c.Query("secret_word"))
 		getSimilarityPerc(c, secretWord, vecHolder, query)
 	})
 
@@ -64,8 +66,11 @@ func getRandWord(c *gin.Context, secretWord *string, wordKeeper *[]string, dicPa
 
 	*wordKeeper = strings.Split(string(file), "\n")
 	*secretWord = strings.ReplaceAll((*wordKeeper)[rand.Intn(len(*wordKeeper))]+"_NOUN", "\r", "")
+	log.Println(*secretWord)
+	word := encrypt(*secretWord)
+	log.Println(word)
 
-	c.IndentedJSON(http.StatusCreated, encrypt(*secretWord))
+	c.IndentedJSON(http.StatusCreated, word)
 }
 
 func getSimilarityPerc(c *gin.Context, secretWord string, vecHolder map[string][]float64, query string) {
