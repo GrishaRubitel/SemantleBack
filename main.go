@@ -1,8 +1,6 @@
 package main
 
 import (
-	"crypto/md5"
-	"encoding/hex"
 	"io/ioutil"
 	"log"
 	"math"
@@ -15,11 +13,15 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+var siphKey string
+
 func main() {
 	var secretWord string
 	var dicPath string = "dataset.txt"
 	wordKeeper := []string{}
 	vecHolder := VecBaseInicialisation()
+
+	siphKey = createKey()
 
 	router := gin.Default()
 
@@ -29,20 +31,24 @@ func main() {
 
 	router.GET("/similarity", func(c *gin.Context) {
 		query := c.Query("query")
+		secretWord := decrypt(c.Query("secret_word"))
 		getSimilarityPerc(c, secretWord, vecHolder, query)
 	})
 
 	router.GET("/check", func(c *gin.Context) {
 		query := c.Query("query")
+		secretWord := decrypt(c.Query("secret_word"))
 		getCheck(c, secretWord, query)
 	})
 
 	router.GET("/hint", func(c *gin.Context) {
-		query := c.Query("best_word")
+		query := c.Query("query")
+		secretWord := decrypt(c.Query("secret_word"))
 		getShowHint(c, vecHolder, secretWord, query)
 	})
 
 	router.GET("/show_finish", func(c *gin.Context) {
+		secretWord := decrypt(c.Query("secret_word"))
 		getShowFinish(c, secretWord)
 	})
 
@@ -59,7 +65,7 @@ func getRandWord(c *gin.Context, secretWord *string, wordKeeper *[]string, dicPa
 	*wordKeeper = strings.Split(string(file), "\n")
 	*secretWord = strings.ReplaceAll((*wordKeeper)[rand.Intn(len(*wordKeeper))]+"_NOUN", "\r", "")
 
-	c.IndentedJSON(http.StatusCreated, mdHashing(*secretWord))
+	c.IndentedJSON(http.StatusCreated, encrypt(*secretWord))
 }
 
 func getSimilarityPerc(c *gin.Context, secretWord string, vecHolder map[string][]float64, query string) {
@@ -123,10 +129,4 @@ func getShowHint(c *gin.Context, vecHolder map[string][]float64, secretWord stri
 
 func getShowFinish(c *gin.Context, secretWord string) {
 	c.IndentedJSON(http.StatusOK, secretWord)
-}
-
-func mdHashing(input string) string {
-	byteInput := []byte(input)
-	md5Hash := md5.Sum(byteInput)
-	return hex.EncodeToString(md5Hash[:])
 }
