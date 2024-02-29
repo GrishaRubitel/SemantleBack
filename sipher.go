@@ -8,6 +8,9 @@ import (
 	"encoding/hex"
 	"fmt"
 	"io"
+	"log"
+	"net/url"
+	"strings"
 )
 
 func createKey() string {
@@ -62,4 +65,16 @@ func decrypt(stringToDecrypt string) string {
 	stream.XORKeyStream(ciphertext, ciphertext)
 
 	return fmt.Sprintf("%s", ciphertext)
+}
+
+func urlDecoder(target string, flag int) string {
+	deTarget, err := url.QueryUnescape(target)
+	if err != nil {
+		log.Fatalln(err)
+		return err.Error()
+	}
+	if flag == 0 {
+		return decrypt(deTarget)
+	}
+	return strings.ToLower(deTarget)
 }

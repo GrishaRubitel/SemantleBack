@@ -32,25 +32,25 @@ func main() {
 	})
 
 	router.GET("/similarity", func(c *gin.Context) {
-		secretWord := decrypt(strings.ToLower(c.Query("secret_word")))
-		query := c.Query("query")
+		secretWord := urlDecoder(c.Query("secret_word"), 0)
+		query := urlDecoder(c.Query("input"), 1)
 		getSimilarityPerc(c, secretWord, vecHolder, query)
 	})
 
 	router.GET("/check", func(c *gin.Context) {
-		query := c.Query("query")
-		secretWord := decrypt(c.Query("secret_word"))
+		secretWord := urlDecoder(c.Query("secret_word"), 0)
+		query := urlDecoder(c.Query("input"), 1)
 		getCheck(c, secretWord, query)
 	})
 
 	router.GET("/hint", func(c *gin.Context) {
-		query := c.Query("query")
-		secretWord := decrypt(c.Query("secret_word"))
+		secretWord := urlDecoder(c.Query("secret_word"), 0)
+		query := c.Query("input")
 		getShowHint(c, vecHolder, secretWord, query)
 	})
 
 	router.GET("/show_finish", func(c *gin.Context) {
-		secretWord := decrypt(c.Query("secret_word"))
+		secretWord := urlDecoder(c.Query("secret_word"), 0)
 		getShowFinish(c, secretWord)
 	})
 
@@ -81,7 +81,10 @@ func getSimilarityPerc(c *gin.Context, secretWord string, vecHolder map[string][
 	for k := range vecHolder {
 		if k == query+"_NOUN" {
 			res = "Word in model"
-			c.IndentedJSON(http.StatusFound, processQuery(vecHolder[k], vecHolder[secretWord]))
+			reu := processQuery(vecHolder[k], vecHolder[secretWord])
+			log.Println(reu)
+			log.Println("Time since start: ", time.Since(start), res)
+			c.IndentedJSON(http.StatusFound, reu)
 			return
 		} else {
 			res = "Word not in model"
@@ -106,7 +109,7 @@ func processQuery(queryVec []float64, secretVec []float64) float64 {
 	}
 	res = scalProd / (math.Sqrt(queryMod) * math.Sqrt(secretMod))
 
-	return math.Floor(math.Abs(res * 100))
+	return math.Abs(res)
 }
 
 func getCheck(c *gin.Context, secretWord string, query string) {
@@ -121,7 +124,7 @@ func getShowHint(c *gin.Context, vecHolder map[string][]float64, secretWord stri
 	for k := range vecHolder {
 		if strings.Contains(k, "_NOUN") {
 			if kPerc := processQuery(vecHolder[k], vecHolder[secretWord]); kPerc > minPerc {
-				hintHolder = append(hintHolder, strconv.FormatFloat(kPerc, 'f', -1, 64)+" "+strings.ReplaceAll(k, "_NOUN", ""))
+				hintHolder = append(hintHolder, strings.ReplaceAll(k, "_NOUN", "")+" "+strconv.FormatFloat(kPerc, 'f', -1, 64))
 			}
 			if len(hintHolder) == 100 {
 				break
@@ -129,7 +132,9 @@ func getShowHint(c *gin.Context, vecHolder map[string][]float64, secretWord stri
 		}
 	}
 
-	c.IndentedJSON(http.StatusFound, hintHolder[rand.Intn(len(hintHolder))])
+	res := hintHolder[rand.Intn(len(hintHolder))]
+	log.Println(res)
+	c.IndentedJSON(http.StatusFound, res)
 }
 
 func getShowFinish(c *gin.Context, secretWord string) {
